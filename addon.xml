@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="plugin.timeshiftsaver"
+       name="Timeshift Saver"
+       version="1.0.0"
+       provider-name="Kontell">
+
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+
+  <extension point="xbmc.python.pluginsource" library="default.py">
+    <provides>executable</provides>
+  </extension>
+
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Copy timeshift segments and remux to a playable video</summary>
+    <description lang="en_GB">
+      Copies timeshift .seg files from inputstream.ffmpegdirect to a
+      chosen output folder (local or network share) along with a remux.sh
+      script. Run the script on the server with ffmpeg to produce a
+      playable MPEG-TS file with video and audio. Supports H.264 and HEVC.
+    </description>
+    <platform>all</platform>
+    <assets>
+      <icon>icon.png</icon>
+    </assets>
+  </extension>
+
+</addon>

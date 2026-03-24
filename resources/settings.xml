@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <category label="Paths">
+
+    <setting id="auto_detect_timeshift" type="bool" label="Auto-detect Timeshift Folder"
+             default="true"
+             help="Automatically search common Kodi locations for the timeshift folder. Disable to set path manually."/>
+
+    <setting id="timeshift_folder" type="text" label="Timeshift Folder (manual)"
+             default="special://profile/addon_data/inputstream.ffmpegdirect/timeshift"
+             help="Type a path directly. You can use special:// paths e.g. special://profile/addon_data/inputstream.ffmpegdirect/timeshift — or use the Kodi file manager to find the real path first."/>
+
+    <setting id="output_folder" type="text" label="Output Folder"
+             default="special://profile/Downloads"
+             help="Where to save the final .ts file. Use special:// paths or a full filesystem path e.g. /sdcard/Download"/>
+
+  </category>
+
+  <category label="Output">
+
+    <setting id="output_filename" type="text" label="Output Filename (no extension)"
+             default="timeshift_recording"
+             help="Base filename for the output .ts file. Date/time will be appended automatically."/>
+
+    <setting id="append_datetime" type="bool" label="Append Date and Time to Filename"
+             default="true"/>
+
+  </category>
+</settings>
