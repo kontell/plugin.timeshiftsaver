@@ -1,0 +1,5 @@
+# Revisions that are pure formatting. Blame walks past these:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Format with black (adopting the CI gate)
+d3e99e62bd0e1fc6ae24a735e5d1b587d5dd2e77
