@@ -1,0 +1,5 @@
+[B]1.0.0[/B]
+• First release. Copies inputstream.ffmpegdirect's timeshift .seg files out to a local or network folder before Kodi recycles them
+• Finds the timeshift folder by itself, reading inputstream.ffmpegdirect's own setting first and falling back through the known special:// and Android locations
+• Orders segments from the .idx file where one exists, and by natural sort where it does not
+• Writes a remux.sh alongside the copied segments; run it on the server with ffmpeg to produce a playable MPEG-TS with video and audio. H.264 and HEVC are supported
