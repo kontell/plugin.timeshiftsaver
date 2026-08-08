@@ -8,80 +8,86 @@ import xbmcaddon
 import xbmcvfs
 
 ADDON = xbmcaddon.Addon()
-ADDON_NAME = ADDON.getAddonInfo('name')
+ADDON_NAME = ADDON.getAddonInfo("name")
 
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
+
 
 def translate(path):
     return xbmcvfs.translatePath(path)
 
 
 def get_timeshift_folder():
-    if ADDON.getSettingBool('auto_detect_timeshift'):
-        for key in ('tempFilePath', 'timeshift_buffer_path', 'timeshiftBufferPath'):
+    if ADDON.getSettingBool("auto_detect_timeshift"):
+        for key in ("tempFilePath", "timeshift_buffer_path", "timeshiftBufferPath"):
             try:
-                isdirect = xbmcaddon.Addon('inputstream.ffmpegdirect')
+                isdirect = xbmcaddon.Addon("inputstream.ffmpegdirect")
                 path = isdirect.getSetting(key)
                 if path:
                     path = translate(path)
-                    for sub in ('timeshift', ''):
+                    for sub in ("timeshift", ""):
                         candidate = os.path.join(path, sub) if sub else path
                         if os.path.isdir(candidate):
-                            xbmc.log(f'[TimeshiftSaver] Auto-detected via "{key}": {candidate}', xbmc.LOGINFO)
+                            xbmc.log(
+                                f'[TimeshiftSaver] Auto-detected via "{key}": {candidate}',
+                                xbmc.LOGINFO,
+                            )
                             return candidate
             except Exception:
                 pass
 
         for sp in [
-            'special://profile/addon_data/inputstream.ffmpegdirect/timeshift',
-            'special://profile/addon_data/inputstream.ffmpegdirect',
-            'special://masterprofile/addon_data/inputstream.ffmpegdirect/timeshift',
-            'special://masterprofile/addon_data/inputstream.ffmpegdirect',
-            'special://temp/inputstream.ffmpegdirect/timeshift',
-            'special://temp/timeshift',
-            'special://home/userdata/addon_data/inputstream.ffmpegdirect/timeshift',
+            "special://profile/addon_data/inputstream.ffmpegdirect/timeshift",
+            "special://profile/addon_data/inputstream.ffmpegdirect",
+            "special://masterprofile/addon_data/inputstream.ffmpegdirect/timeshift",
+            "special://masterprofile/addon_data/inputstream.ffmpegdirect",
+            "special://temp/inputstream.ffmpegdirect/timeshift",
+            "special://temp/timeshift",
+            "special://home/userdata/addon_data/inputstream.ffmpegdirect/timeshift",
         ]:
             resolved = translate(sp)
             if os.path.isdir(resolved):
-                xbmc.log(f'[TimeshiftSaver] Auto-detected: {resolved}', xbmc.LOGINFO)
+                xbmc.log(f"[TimeshiftSaver] Auto-detected: {resolved}", xbmc.LOGINFO)
                 return resolved
 
         for path in [
-            '/data/data/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift',
-            '/data/data/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect',
-            '/data/user/0/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift',
-            '/data/user/0/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect',
-            '/data/data/org.xbmc.kodi.firetv/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift',
-            '/sdcard/Android/data/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift',
+            "/data/data/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift",
+            "/data/data/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect",
+            "/data/user/0/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift",
+            "/data/user/0/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect",
+            "/data/data/org.xbmc.kodi.firetv/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift",
+            "/sdcard/Android/data/org.xbmc.kodi/files/.kodi/userdata/addon_data/inputstream.ffmpegdirect/timeshift",
         ]:
             if os.path.isdir(path):
-                xbmc.log(f'[TimeshiftSaver] Auto-detected Android: {path}', xbmc.LOGINFO)
+                xbmc.log(
+                    f"[TimeshiftSaver] Auto-detected Android: {path}", xbmc.LOGINFO
+                )
                 return path
 
-        xbmc.log('[TimeshiftSaver] Auto-detect failed.', xbmc.LOGWARNING)
+        xbmc.log("[TimeshiftSaver] Auto-detect failed.", xbmc.LOGWARNING)
 
-    manual = ADDON.getSetting('timeshift_folder')
+    manual = ADDON.getSetting("timeshift_folder")
     if manual:
-        return translate(manual) if manual.startswith('special://') else manual
+        return translate(manual) if manual.startswith("special://") else manual
     return None
 
 
 def get_output_folder():
-    path = ADDON.getSetting('output_folder') or 'special://profile/Downloads'
-    return translate(path) if path.startswith('special://') else path
+    path = ADDON.getSetting("output_folder") or "special://profile/Downloads"
+    return translate(path) if path.startswith("special://") else path
 
 
 def is_vfs_path(path):
-    return '://' in path and not path.startswith('/')
+    return "://" in path and not path.startswith("/")
 
 
 def build_output_dirname():
-    base = ADDON.getSetting('output_filename') or 'timeshift_recording'
-    if ADDON.getSettingBool('append_datetime'):
-        stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        return f'{base}_{stamp}'
+    base = ADDON.getSetting("output_filename") or "timeshift_recording"
+    if ADDON.getSettingBool("append_datetime"):
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return f"{base}_{stamp}"
     return base
 
 
@@ -89,15 +95,16 @@ def build_output_dirname():
 # Segment discovery
 # ---------------------------------------------------------------------------
 
+
 def find_seg_files(folder):
     """Return (seg_files, idx_file) — lists of full paths."""
     segs = []
     idx = None
     for entry in os.listdir(folder):
         low = entry.lower()
-        if low.endswith('.seg'):
+        if low.endswith(".seg"):
             segs.append(os.path.join(folder, entry))
-        elif low.endswith('.idx'):
+        elif low.endswith(".idx"):
             idx = os.path.join(folder, entry)
     segs.sort()
     return segs, idx
@@ -107,7 +114,7 @@ def find_seg_files(folder):
 # Remux script (written to the output directory, run on the server)
 # ---------------------------------------------------------------------------
 
-REMUX_SCRIPT = r'''#!/bin/bash
+REMUX_SCRIPT = r"""#!/bin/bash
 #
 # remux.sh — Demux .seg files and remux to MPEG-TS using ffmpeg.
 # Run this on the server after the Kodi plugin has copied the files.
@@ -302,12 +309,13 @@ echo "Cleaning up source files..."
 rm -f *.seg *.idx
 
 echo "Finished. You can delete this script."
-'''
+"""
 
 
 # ---------------------------------------------------------------------------
 # Main UI flow
 # ---------------------------------------------------------------------------
+
 
 def main():
     dialog = xbmcgui.Dialog()
@@ -315,23 +323,29 @@ def main():
     # --- Resolve paths ---
     timeshift_folder = get_timeshift_folder()
     if not timeshift_folder or not os.path.isdir(timeshift_folder):
-        resolved_special = translate('special://profile/addon_data/inputstream.ffmpegdirect')
-        msg = (
-            f'Timeshift folder not found.\n\n'
-            f'Resolved profile path:\n[I]{resolved_special}[/I]\n\n'
-            f'Open addon settings and paste the correct path into '
-            f'"Timeshift Folder (manual)".\n\n'
-            f'Tip: Use the Kodi file manager to browse to:\n'
-            f'Profile directory → addon_data → inputstream.ffmpegdirect'
+        resolved_special = translate(
+            "special://profile/addon_data/inputstream.ffmpegdirect"
         )
-        choice = dialog.yesno(ADDON_NAME, msg, nolabel='Close', yeslabel='Open Settings')
+        msg = (
+            f"Timeshift folder not found.\n\n"
+            f"Resolved profile path:\n[I]{resolved_special}[/I]\n\n"
+            f"Open addon settings and paste the correct path into "
+            f'"Timeshift Folder (manual)".\n\n'
+            f"Tip: Use the Kodi file manager to browse to:\n"
+            f"Profile directory → addon_data → inputstream.ffmpegdirect"
+        )
+        choice = dialog.yesno(
+            ADDON_NAME, msg, nolabel="Close", yeslabel="Open Settings"
+        )
         if choice:
             ADDON.openSettings()
         return
 
     output_folder = get_output_folder()
     if not output_folder:
-        dialog.ok(ADDON_NAME, 'No output folder configured.\n\nPlease set one in settings.')
+        dialog.ok(
+            ADDON_NAME, "No output folder configured.\n\nPlease set one in settings."
+        )
         ADDON.openSettings()
         return
 
@@ -340,8 +354,8 @@ def main():
     if not seg_files:
         dialog.ok(
             ADDON_NAME,
-            f'No .seg files found in:\n{timeshift_folder}\n\n'
-            'Make sure the timeshift folder path is correct.'
+            f"No .seg files found in:\n{timeshift_folder}\n\n"
+            "Make sure the timeshift folder path is correct.",
         )
         return
 
@@ -350,7 +364,7 @@ def main():
     # --- Build output path ---
     dirname = build_output_dirname()
     if is_vfs_path(output_folder):
-        dest_dir = output_folder.rstrip('/') + '/' + dirname + '/'
+        dest_dir = output_folder.rstrip("/") + "/" + dirname + "/"
     else:
         dest_dir = os.path.join(output_folder, dirname) + os.sep
 
@@ -358,11 +372,11 @@ def main():
     files_to_copy = len(seg_files) + (1 if idx_file else 0)
     confirmed = dialog.yesno(
         ADDON_NAME,
-        f'Found [B]{len(seg_files)}[/B] segments '
-        f'({total_size_mb:.1f} MB).\n\n'
-        f'Copy to:\n[I]{dest_dir}[/I]\n\n'
-        f'A remux.sh script will be included.\n'
-        f'Run it on the server to produce a .ts file.'
+        f"Found [B]{len(seg_files)}[/B] segments "
+        f"({total_size_mb:.1f} MB).\n\n"
+        f"Copy to:\n[I]{dest_dir}[/I]\n\n"
+        f"A remux.sh script will be included.\n"
+        f"Run it on the server to produce a .ts file.",
     )
     if not confirmed:
         return
@@ -375,7 +389,7 @@ def main():
 
     # --- Copy files ---
     progress = xbmcgui.DialogProgress()
-    progress.create(ADDON_NAME, 'Copying files...')
+    progress.create(ADDON_NAME, "Copying files...")
 
     all_files = list(seg_files)
     if idx_file:
@@ -387,16 +401,16 @@ def main():
 
     for i, src_path in enumerate(all_files):
         if progress.iscanceled():
-            xbmc.log('[TimeshiftSaver] User cancelled.', xbmc.LOGINFO)
+            xbmc.log("[TimeshiftSaver] User cancelled.", xbmc.LOGINFO)
             progress.close()
-            dialog.ok(ADDON_NAME, f'Cancelled after copying {copied} of {total} files.')
+            dialog.ok(ADDON_NAME, f"Cancelled after copying {copied} of {total} files.")
             return
 
         filename = os.path.basename(src_path)
         file_mb = os.path.getsize(src_path) / (1024 * 1024)
         progress.update(
             int((i / total) * 100),
-            f'Copying {i + 1} of {total} ({file_mb:.1f} MB)\n{filename}'
+            f"Copying {i + 1} of {total} ({file_mb:.1f} MB)\n{filename}",
         )
 
         if is_vfs_path(dest_dir):
@@ -405,7 +419,7 @@ def main():
         else:
             dest_path = os.path.join(dest_dir, filename)
             try:
-                with open(src_path, 'rb') as sf, open(dest_path, 'wb') as df:
+                with open(src_path, "rb") as sf, open(dest_path, "wb") as df:
                     while True:
                         chunk = sf.read(1024 * 1024)
                         if not chunk:
@@ -413,61 +427,59 @@ def main():
                         df.write(chunk)
                 ok = True
             except OSError as e:
-                xbmc.log(f'[TimeshiftSaver] Copy failed {filename}: {e}', xbmc.LOGERROR)
+                xbmc.log(f"[TimeshiftSaver] Copy failed {filename}: {e}", xbmc.LOGERROR)
                 ok = False
 
         if ok:
             copied += 1
         else:
             failed.append(filename)
-            xbmc.log(f'[TimeshiftSaver] Failed to copy: {filename}', xbmc.LOGERROR)
+            xbmc.log(f"[TimeshiftSaver] Failed to copy: {filename}", xbmc.LOGERROR)
 
     # --- Write remux.sh ---
-    progress.update(95, 'Writing remux script...')
+    progress.update(95, "Writing remux script...")
 
-    script_content = REMUX_SCRIPT.encode('utf-8')
+    script_content = REMUX_SCRIPT.encode("utf-8")
     if is_vfs_path(dest_dir):
-        script_path = dest_dir + 'remux.sh'
-        f = xbmcvfs.File(script_path, 'w')
+        script_path = dest_dir + "remux.sh"
+        f = xbmcvfs.File(script_path, "w")
         f.write(script_content)
         f.close()
     else:
-        script_path = os.path.join(dest_dir, 'remux.sh')
-        with open(script_path, 'wb') as f:
+        script_path = os.path.join(dest_dir, "remux.sh")
+        with open(script_path, "wb") as f:
             f.write(script_content)
         os.chmod(script_path, 0o755)
 
-    progress.update(100, 'Done!')
+    progress.update(100, "Done!")
     progress.close()
 
     # --- Result ---
     if failed:
         dialog.ok(
             ADDON_NAME,
-            f'Copied {copied} of {total} files.\n\n'
-            f'[B]{len(failed)} failed:[/B]\n' +
-            '\n'.join(failed[:5]) +
-            ('\n...' if len(failed) > 5 else '')
+            f"Copied {copied} of {total} files.\n\n"
+            f"[B]{len(failed)} failed:[/B]\n"
+            + "\n".join(failed[:5])
+            + ("\n..." if len(failed) > 5 else ""),
         )
     else:
         dialog.ok(
             ADDON_NAME,
-            f'[B]Done![/B]\n\n'
-            f'Copied {copied} files ({total_size_mb:.1f} MB) to:\n'
-            f'[I]{dest_dir}[/I]\n\n'
-            f'Run [B]remux.sh[/B] on the server to produce\n'
-            f'a playable .ts file with video + audio.'
+            f"[B]Done![/B]\n\n"
+            f"Copied {copied} files ({total_size_mb:.1f} MB) to:\n"
+            f"[I]{dest_dir}[/I]\n\n"
+            f"Run [B]remux.sh[/B] on the server to produce\n"
+            f"a playable .ts file with video + audio.",
         )
 
     xbmcgui.Dialog().notification(
-        ADDON_NAME,
-        f'Copied {copied} files',
-        xbmcgui.NOTIFICATION_INFO,
-        5000
+        ADDON_NAME, f"Copied {copied} files", xbmcgui.NOTIFICATION_INFO, 5000
     )
-    xbmc.log(f'[TimeshiftSaver] Copied {copied}/{total} files to {dest_dir}',
-             xbmc.LOGINFO)
+    xbmc.log(
+        f"[TimeshiftSaver] Copied {copied}/{total} files to {dest_dir}", xbmc.LOGINFO
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
