@@ -1,54 +1,74 @@
-# CLAUDE.md
+# plugin.timeshiftsaver
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Kodi plugin that concatenates timeshift `.seg` files produced by
+`inputstream.ffmpegdirect` into a single `.ts` file, and writes a `remux.sh` for
+server-side ffmpeg remuxing. Deliberately two-step: the target is Android TV boxes
+with no ffmpeg and little storage.
 
-## Project Overview
+## Kodi knowledge lives in kodi-drive
 
-Timeshift Saver is a Kodi plugin (`plugin.timeshiftsaver`) that concatenates timeshift `.seg` files produced by `inputstream.ffmpegdirect` into a single `.ts` transport stream file. It runs entirely inside Kodi's embedded Python environment.
+Shared Kodi knowledge is **not** in this file. Use the `kodi-drive:*` skills, or
+read `../../kodi-drive/README.md`.
 
-## Architecture
+Directly relevant: `kodi-python-runtime`, `kodi-addon-manifest`,
+`kodi-addon-identity`, `kodi-addon-release`, `kodi-inputstream`, `kodi-logs`.
 
-The repo root *is* the addon root, so paths here are repo-relative:
+**Do not add generally-useful Kodi findings here** — contribute them to kodi-drive.
+This file holds only what is specific to *this* add-on.
 
-- `addon.xml` — Kodi addon manifest (id, version, metadata)
-- `default.py` — All plugin logic: path resolution, segment ordering, concatenation, and UI
-- `resources/settings.xml` — User-configurable settings (XML schema for Kodi settings UI)
+## Layout
 
-`default.py` flow: `main()` resolves the timeshift folder (auto-detect from `inputstream.ffmpegdirect` settings → known special:// paths → Android paths → manual fallback), discovers and orders `.seg` files (via `.idx` if present, else natural sort), prompts the user, then concatenates segments with a progress dialog.
+The repo root **is** the add-on root, so paths are repo-relative:
 
-**The addon id was renamed** from `plugin.timeshiftsave` to `plugin.timeshiftsaver`. Anything still spelling it without the trailing `r` predates that and is wrong; an installed copy under the old id is a different addon to Kodi and has to be removed by hand.
+| Path | |
+|---|---|
+| `addon.xml` | manifest |
+| `default.py` | all plugin logic — path resolution, ordering, concatenation, UI |
+| `resources/settings.xml` | settings schema |
+
+`main()` resolves the timeshift folder (auto-detect from
+`inputstream.ffmpegdirect` settings → known `special://` paths → Android paths →
+manual fallback), discovers and orders `.seg` files (by `.idx` if present, else
+natural sort), prompts, then concatenates with a progress dialog.
+
+## The add-on id was renamed
+
+`plugin.timeshiftsave` → `plugin.timeshiftsaver`. Anything still spelling it
+without the trailing `r` predates that and is wrong.
+
+To Kodi a renamed id is a **different add-on**, so an installed copy under the old
+id survives and must be removed by hand — see `kodi-addon-identity`. The outer
+directory's `CLAUDE.md` is a redirect for exactly this reason.
 
 ## Commands
 
 ```bash
-tox                         # what CI gates on (black, compileall)
-black --check --diff .
-python -m compileall -q default.py tools/
-
-tools/dev-install.sh        # rsync the working tree into ~/.kodi/addons and reload
-tools/build.py [OUTDIR]     # Kodi-installable zip (default ./dist)
+tox                       # what CI gates on: black, compileall
+tools/dev-install.sh      # rsync the working tree into the addons dir and reload
+tools/build.py [OUTDIR]   # Kodi-installable zip, default ./dist
 ```
 
-There is no test framework: the code runs inside Kodi's embedded Python 3 with `xbmc`/`xbmcgui`/`xbmcaddon`/`xbmcvfs` available only at runtime, and the interesting behaviour (segment ordering, the ffmpeg remux) is only observable against real timeshift output. `~/.kodi/temp/kodi.log` is the primary debugging tool — the plugin logs with the `[TimeshiftSaver]` prefix.
+No test framework. The code runs inside Kodi's embedded Python with the `xbmc*`
+modules available only at runtime, and the interesting behaviour — segment
+ordering, the ffmpeg remux — is only observable against real timeshift output.
+Debug via the log; the plugin prefixes its lines with `[TimeshiftSaver]`. See
+`kodi-logs`, and note the lower-case severity trap there before grepping.
 
-## CI and releases
+## Releases
 
-Same shape as every other Kontell add-on (see `plugin.video.kofin` for the reference):
+Same shape as the other Kontell add-ons: `ci.yml` gates and uploads a PR zip;
+`release.yml` on a `v*` tag re-runs the gates, asserts the tag matches
+`addon.xml`, and drafts a release from the top paragraph of `changelog.txt`.
 
-- `.github/workflows/ci.yml` — on every PR and push to `main`: `black` and `compileall` as separate Checks, plus a `package` job uploading an installable zip (`plugin.timeshiftsaver-<ver>-prN-<sha>.zip`, 14-day retention).
-- `.github/workflows/release.yml` — on a `v*` tag: re-runs the gates, builds the zip, asserts the tag matches `addon.xml`, and opens a **draft** GitHub release whose body is the top paragraph of `changelog.txt`.
-
-### Cutting a release
-
-1. Bump `version="X.Y.Z"` in `addon.xml`.
-2. Prepend a new top entry to `changelog.txt` (the top paragraph becomes the release body).
-3. Commit, merge to `main`, wait for CI green.
+1. Bump `version=` in `addon.xml`.
+2. Prepend a `changelog.txt` entry.
+3. Commit, merge to `main`, wait for green.
 4. `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. Review the draft (`gh release view vX.Y.Z`), then publish. Publishing is what tells `repository.kontell` to pick the release up, so it must be done by a human or with a personal token — a `GITHUB_TOKEN` cannot trigger it.
+5. Review the draft, then **publish it yourself** — `kodi-addon-release` explains
+   why a workflow cannot.
 
-## Key Conventions
+## Conventions
 
-- All logging uses the `[TimeshiftSaver]` prefix via `xbmc.log()`
-- Kodi `special://` paths must be resolved through `xbmcvfs.translatePath()` before filesystem access
-- Settings are defined in `resources/settings.xml` and accessed via `xbmcaddon.Addon()` methods (`getSetting`, `getSettingBool`)
-- The addon targets `xbmc.python` API version 3.0.0
+- Log through `xbmc.log()` with the `[TimeshiftSaver]` prefix.
+- Targets `xbmc.python` 3.0.0.
+- Settings in `resources/settings.xml`, read via `xbmcaddon.Addon()`.
